@@ -1,3 +1,5 @@
 *.hcl
 .terraform/
 .env
+node_modules/
+dist

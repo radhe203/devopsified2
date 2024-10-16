@@ -1,0 +1,107 @@
+pipeline {
+    agent any 
+    tools {
+        nodejs 'nodejs'
+    }
+    environment  {
+        SCANNER_HOME = tool 'sonar-scanner'
+        GIT_REPO_NAME = "devopsified2"
+        GIT_USER_NAME = "radhe203"
+    }
+    stages {
+        stage('Cleaning Workspace') {
+            steps {
+                cleanWs()
+            }
+        }
+        stage('Checkout from Git') {
+            steps {
+                git credentialsId: 'GITHUB', url: 'https://github.com/radhe203/devopsified2.git' ,branch: 'main'
+            }
+        }
+        stage('Sonarqube Analysis') {
+            steps {
+                dir('app-Code/client') {
+                    withSonarQubeEnv('sonar-server') {
+                        sh '''
+                            $SCANNER_HOME/bin/sonar-scanner \
+                            -Dsonar.projectName=frontend \
+                            -Dsonar.projectKey=frontend
+                        '''
+                    }
+                }
+            }
+        }
+        stage('Quality Check') {
+            steps {
+                script {
+                    waitForQualityGate abortPipeline: false, credentialsId: 'sonar-token' 
+                }
+            }
+        }
+        stage('Trivy File Scan') {
+            steps {
+                dir('app-code/client') {
+                    sh 'trivy fs . > trivyfs.txt'
+                }
+            }
+        }
+        stage("Docker Image Build") {
+            steps {
+                script {
+                    dir('app-code/client') {
+                        sh 'docker system prune -f'
+                        sh 'docker container prune -f'
+                        sh "docker build -t radhe2003/devopsified2-client:${BUILD_NUMBER} ."
+                    }
+                }
+            }
+        }
+        stage("Docker Image Pushing") {
+            steps {
+                script {
+                    // Login to Docker registry
+                    docker.withRegistry('https://index.docker.io/v1/', 'docker-cred') {
+                        // Push the Docker image
+                        sh "docker push radhe2003/devopsified2-client:${BUILD_NUMBER}"
+                    }
+                }
+            }
+        }
+        stage("TRIVY Image Scan") {
+            steps {
+                script {
+                    def scanResult = sh(script: "trivy image --no-progress radhe2003/devopsified2-client:${BUILD_NUMBER}", 
+                        returnStdout: true)
+
+                    writeFile file: 'trivyimage.txt', text: scanResult
+
+                    echo scanResult
+                }
+            }
+        }
+        stage('Checkout Code') {
+            steps {
+                git credentialsId: 'GITHUB', url: 'https://github.com/radhe203/devopsified2.git', branch: "main"
+            }
+        }
+        stage('Update Deployment file') {
+            steps {
+                dir('k8s') {
+                    withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
+                        sh '''
+                            git config user.email "radheshyamjio52@gmail.com"
+                            git config user.name "radheshyam"
+                            ls -al
+                            pwd
+                            sed -i "s|image: radhe2003/devopsified2-client:.*|image: radhe2003/devopsified2-client:${BUILD_NUMBER}|" client.yml
+                            git add client.yml
+                            git commit -m "Update client.yml Image to version ${BUILD_NUMBER}"
+                            git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main
+                        '''
+                    }
+                }
+            }
+        }
+    }
+}

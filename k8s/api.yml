@@ -27,9 +27,9 @@ spec:
 ---
 apiVersion: v1
 kind: Service
-namespace: mtier
 metadata:
   name: api-service
+  namespace: mtier
 spec:
   type: ClusterIP
   ports:

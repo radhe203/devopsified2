@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: client
-          image: radhe2003/devopsified2-client:5
+          image: radhe2003/devopsified2-client:6
           ports:
             - containerPort: 5000
 

@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: api
-          image: radhe2003/devopsified2-api:34
+          image: radhe2003/devopsified2-api:36
           ports:
             - containerPort: 3000
           env:

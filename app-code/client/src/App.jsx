@@ -120,7 +120,7 @@ function App() {
   return (
     <>
       <div>
-        <h1>Email Application</h1>
+        <h1>To Do App</h1>
 
         <form onSubmit={createHandel}>
           <input
@@ -136,7 +136,7 @@ function App() {
         </form>
 
         <div className="box">
-          <h2>Subscribed Emails</h2>
+          <h2>Due Works</h2>
           {email.map((em) => {
             return (
               <form className="email" key={em.email} onSubmit={editHandel}>
